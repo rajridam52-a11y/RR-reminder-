@@ -40,6 +40,14 @@ import com.example.weather.model.UIWeather
 
 object DashboardProfileStore {
     private const val PREFS = "rr_dashboard_profile"
+    private val _profileFlow = kotlinx.coroutines.flow.MutableStateFlow<DashboardProfile?>(null)
+
+    fun observe(context: Context): kotlinx.coroutines.flow.StateFlow<DashboardProfile?> {
+        if (_profileFlow.value == null) {
+            _profileFlow.value = load(context)
+        }
+        return _profileFlow
+    }
 
     fun load(context: Context): DashboardProfile {
         val sp = context.applicationContext.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
@@ -65,6 +73,7 @@ object DashboardProfileStore {
             .putBoolean("show_quick_notes", profile.showQuickNotes)
             .putBoolean("show_daily_planner", profile.showDailyPlanner)
             .apply()
+        _profileFlow.value = profile
     }
 }
 
@@ -74,7 +83,8 @@ fun HomeScreen(
 ) {
     val context = LocalContext.current
     val db = remember { AppDatabase.getDatabase(context) }
-    val profile = remember { DashboardProfileStore.load(context) }
+    val observedProfile by DashboardProfileStore.observe(context).collectAsState()
+    val profile = observedProfile ?: remember { DashboardProfileStore.load(context) }
 
     val alarms by db.alarmDao().getAllAlarmsFlow().collectAsState(initial = emptyList())
     val activeReminders by db.reminderDao().getActiveRemindersFlow().collectAsState(initial = emptyList())
