@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<full-backup-content>
+    <exclude
+        domain="sharedpref"
+        path="rr_reminder_secure_prefs.xml"/>
+    <exclude
+        domain="database"
+        path="rr_reminder_database-wal"/>
+    <exclude
+        domain="database"
+        path="rr_reminder_database-shm"/>
+    <exclude
+        domain="root"
+        path="no_backup"/>
+</full-backup-content>

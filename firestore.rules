@@ -1,0 +1,250 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Global fail-closed default rule
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // --- GLOBAL HARDENED PRIMITIVES ---
+    function isValidId(id) {
+      return id is string && id.size() > 0 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function isAdmin() {
+      let cfgPath = /databases/$(database)/documents/admin_roles/config;
+      return isSignedIn() && exists(cfgPath) && (
+        ('authorized_admin_uids' in get(cfgPath).data &&
+          get(cfgPath).data.authorized_admin_uids is list &&
+          request.auth.uid in get(cfgPath).data.authorized_admin_uids) ||
+        ('primary_admin_uid' in get(cfgPath).data &&
+          get(cfgPath).data.primary_admin_uid == request.auth.uid)
+      );
+    }
+
+    function isDeviceOwner(deviceId) {
+      let devPath = /databases/$(database)/documents/devices/$(deviceId);
+      return isSignedIn() && exists(devPath) && get(devPath).data.ownerUid == request.auth.uid;
+    }
+
+    // --- VALIDATION BLUEPRINTS ---
+    function isValidDevice(data) {
+      return data.deviceId is string && data.deviceId.size() > 0 && data.deviceId.size() <= 128 &&
+             data.ownerUid is string && data.ownerUid.size() > 0 && data.ownerUid.size() <= 128 &&
+             data.deviceModel is string && data.deviceModel.size() > 0 && data.deviceModel.size() <= 128 &&
+             data.fcmToken is string && data.fcmToken.size() <= 512 &&
+             data.status in ['ACTIVE', 'REVOKED'] &&
+             (!('appVersion' in data) || (data.appVersion is string && data.appVersion.size() <= 32)) &&
+             data.registeredAt is timestamp && data.registeredAt <= request.time &&
+             data.lastActiveAt is timestamp && data.lastActiveAt <= request.time;
+    }
+
+    function isValidPendingCommand(data) {
+      return data.commandId is string && data.commandId.size() > 0 && data.commandId.size() <= 128 &&
+             data.ownerUid is string && data.ownerUid.size() > 0 && data.ownerUid.size() <= 128 &&
+             data.issuedByUid is string && data.issuedByUid.size() > 0 && data.issuedByUid.size() <= 128 &&
+             data.action in ['LOCKDOWN', 'RELEASE_LOCKDOWN', 'SYNC_SETTINGS', 'PING'] &&
+             data.status in ['PENDING', 'COMPLETED', 'EXPIRED', 'FAILED'] &&
+             data.expiresAt is int && data.expiresAt > 0 &&
+             data.createdAt is timestamp && data.createdAt <= request.time &&
+             (!('reason' in data) || (data.reason is string && data.reason.size() <= 240)) &&
+             (!('securityLevel' in data) || (data.securityLevel is string && data.securityLevel.size() <= 32)) &&
+             (!('maxFailures' in data) || (data.maxFailures is int && data.maxFailures >= 2 && data.maxFailures <= 10)) &&
+             (!('lockoutSeconds' in data) || (data.lockoutSeconds is int && data.lockoutSeconds >= 30 && data.lockoutSeconds <= 600)) &&
+             (!('autoLockdownOnTamper' in data) || data.autoLockdownOnTamper is bool) &&
+             (!('error' in data) || data.error == null || (data.error is string && data.error.size() <= 500)) &&
+             (!('acknowledgedAt' in data) || (data.acknowledgedAt is timestamp && data.acknowledgedAt <= request.time));
+    }
+
+    function isValidCommandHistory(data) {
+      return data.commandId is string && data.commandId.size() > 0 && data.commandId.size() <= 128 &&
+             data.ownerUid is string && data.ownerUid.size() > 0 && data.ownerUid.size() <= 128 &&
+             data.issuedByUid is string && data.issuedByUid.size() > 0 && data.issuedByUid.size() <= 128 &&
+             data.action in ['LOCKDOWN', 'RELEASE_LOCKDOWN', 'SYNC_SETTINGS', 'PING'] &&
+             data.status in ['COMPLETED', 'EXPIRED', 'FAILED'] &&
+             data.acknowledgedAt is timestamp && data.acknowledgedAt <= request.time;
+    }
+
+    function isValidUserProfile(data) {
+      return data.uid is string && data.uid.size() > 0 && data.uid.size() <= 128 &&
+             (!('displayName' in data) || (data.displayName is string && data.displayName.size() <= 80)) &&
+             data.createdAt is timestamp && data.createdAt <= request.time &&
+             (!('updatedAt' in data) || (data.updatedAt is timestamp && data.updatedAt <= request.time));
+    }
+
+    function isValidUserSettings(data) {
+      return data.securityLevel in ['STANDARD', 'HIGH', 'MAXIMUM'] &&
+             data.maxFailures is int && data.maxFailures >= 2 && data.maxFailures <= 10 &&
+             data.lockoutSeconds is int && data.lockoutSeconds >= 30 && data.lockoutSeconds <= 600 &&
+             (!('notificationsEnabled' in data) || data.notificationsEnabled is bool) &&
+             (!('autoLockdownOnTamper' in data) || data.autoLockdownOnTamper is bool) &&
+             data.updatedAt is timestamp && data.updatedAt <= request.time;
+    }
+
+    function isValidSecurityEvent(data) {
+      return data.eventId is string && data.eventId.size() > 0 && data.eventId.size() <= 128 &&
+             data.userId is string && data.userId.size() > 0 && data.userId.size() <= 128 &&
+             data.eventType is string && data.eventType.size() > 0 && data.eventType.size() <= 80 &&
+             data.category is string && data.category.size() > 0 && data.category.size() <= 40 &&
+             data.severity in ['INFO', 'LOW', 'MEDIUM', 'HIGH', 'CRITICAL'] &&
+             data.timestamp is timestamp && data.timestamp <= request.time &&
+             data.detectionSource is string && data.detectionSource.size() > 0 && data.detectionSource.size() <= 80 &&
+             data.actionTaken is string && data.actionTaken.size() > 0 && data.actionTaken.size() <= 40 &&
+             (!('deviceId' in data) || (data.deviceId is string && data.deviceId.size() <= 128)) &&
+             (!('accountIdentifier' in data) || (data.accountIdentifier is string && data.accountIdentifier.size() <= 128)) &&
+             (!('details' in data) || data.details is map);
+    }
+
+    // --- SERVER-CONTROLLED ADMIN ROLES (READ-ONLY TO VERIFIED ADMIN UID) ---
+    match /admin_roles/{docId} {
+      allow get: if isSignedIn() && resource != null && (
+        ('authorized_admin_uids' in existing() &&
+          existing().authorized_admin_uids is list &&
+          request.auth.uid in existing().authorized_admin_uids) ||
+        ('primary_admin_uid' in existing() &&
+          existing().primary_admin_uid == request.auth.uid)
+      );
+      allow list, create, update, delete: if false;
+    }
+
+    // --- DEVICES & INBOUND COMMAND QUEUES ---
+    match /devices/{deviceId} {
+      allow get: if isSignedIn() && isValidId(deviceId) &&
+                    (resource == null || existing().ownerUid == request.auth.uid || isAdmin());
+      allow list: if isSignedIn() &&
+                     (existing().ownerUid == request.auth.uid || isAdmin());
+
+      allow create: if isSignedIn() &&
+                       isValidId(deviceId) &&
+                       isValidDevice(incoming()) &&
+                       incoming().deviceId == deviceId &&
+                       incoming().ownerUid == request.auth.uid &&
+                       incoming().keys().hasAll(['deviceId', 'ownerUid', 'deviceModel', 'fcmToken', 'status', 'registeredAt', 'lastActiveAt']) &&
+                       incoming().keys().hasOnly(['deviceId', 'ownerUid', 'deviceModel', 'fcmToken', 'status', 'appVersion', 'registeredAt', 'lastActiveAt']);
+
+      allow update: if isSignedIn() &&
+                       isValidId(deviceId) &&
+                       isValidDevice(incoming()) &&
+                       (existing().ownerUid == request.auth.uid || isAdmin()) &&
+                       incoming().ownerUid == existing().ownerUid &&
+                       incoming().deviceId == existing().deviceId &&
+                       incoming().registeredAt == existing().registeredAt &&
+                       incoming().diff(existing()).affectedKeys().hasOnly(['deviceModel', 'fcmToken', 'status', 'appVersion', 'lastActiveAt']);
+
+      allow delete: if isSignedIn() && isValidId(deviceId) &&
+                       (existing().ownerUid == request.auth.uid || isAdmin());
+
+      match /pending_commands/{commandId} {
+        allow get: if isSignedIn() && isValidId(deviceId) && isValidId(commandId) &&
+                      (isDeviceOwner(deviceId) || isAdmin());
+        allow list: if isSignedIn() &&
+                       (existing().ownerUid == request.auth.uid || isAdmin());
+
+        // ONLY authorized admins (or Admin SDK Cloud Functions) may create remote commands
+        allow create: if isAdmin() &&
+                         isValidId(deviceId) &&
+                         isValidId(commandId) &&
+                         exists(/databases/$(database)/documents/devices/$(deviceId)) &&
+                         isValidPendingCommand(incoming()) &&
+                         incoming().commandId == commandId &&
+                         incoming().ownerUid == get(/databases/$(database)/documents/devices/$(deviceId)).data.ownerUid &&
+                         incoming().issuedByUid == request.auth.uid &&
+                         incoming().status == 'PENDING' &&
+                         incoming().keys().hasAll(['commandId', 'ownerUid', 'issuedByUid', 'action', 'status', 'expiresAt', 'createdAt']) &&
+                         incoming().keys().hasOnly(['commandId', 'ownerUid', 'issuedByUid', 'action', 'status', 'expiresAt', 'createdAt', 'reason', 'securityLevel', 'maxFailures', 'lockoutSeconds', 'autoLockdownOnTamper']);
+
+        // Terminal state locking: device owner can ONLY acknowledge PENDING -> COMPLETED/EXPIRED/FAILED once
+        allow update: if isSignedIn() &&
+                         isValidId(deviceId) &&
+                         isValidId(commandId) &&
+                         isValidPendingCommand(incoming()) && (
+                           isAdmin() || (
+                             isDeviceOwner(deviceId) &&
+                             existing().status == 'PENDING' &&
+                             incoming().status in ['COMPLETED', 'EXPIRED', 'FAILED'] &&
+                             incoming().commandId == existing().commandId &&
+                             incoming().ownerUid == existing().ownerUid &&
+                             incoming().issuedByUid == existing().issuedByUid &&
+                             incoming().action == existing().action &&
+                             incoming().expiresAt == existing().expiresAt &&
+                             incoming().createdAt == existing().createdAt &&
+                             incoming().diff(existing()).affectedKeys().hasOnly(['status', 'acknowledgedAt', 'error'])
+                           )
+                         );
+
+        allow delete: if isAdmin() && isValidId(deviceId) && isValidId(commandId);
+      }
+
+      match /command_history/{commandId} {
+        allow get: if isSignedIn() && isValidId(deviceId) && isValidId(commandId) &&
+                      (isDeviceOwner(deviceId) || isAdmin());
+        allow list: if isSignedIn() &&
+                       (existing().ownerUid == request.auth.uid || isAdmin());
+        allow create: if isAdmin() && isValidId(deviceId) && isValidId(commandId) && isValidCommandHistory(incoming());
+        allow update, delete: if false;
+      }
+    }
+
+    // --- USER-SCOPED SETTINGS & PROFILE ---
+    match /users/{userId} {
+      allow get, list: if isOwner(userId) || isAdmin();
+      allow create: if isOwner(userId) &&
+                       isValidId(userId) &&
+                       isValidUserProfile(incoming()) &&
+                       incoming().uid == userId &&
+                       incoming().keys().hasAll(['uid', 'createdAt']) &&
+                       incoming().keys().hasOnly(['uid', 'displayName', 'createdAt', 'updatedAt']);
+      allow update: if isOwner(userId) &&
+                       isValidId(userId) &&
+                       isValidUserProfile(incoming()) &&
+                       incoming().uid == existing().uid &&
+                       incoming().createdAt == existing().createdAt &&
+                       incoming().diff(existing()).affectedKeys().hasOnly(['displayName', 'updatedAt']);
+      allow delete: if isOwner(userId) || isAdmin();
+
+      match /settings/{settingId} {
+        allow get, list: if isOwner(userId) || isAdmin();
+        allow create, update: if isOwner(userId) &&
+                                isValidId(userId) &&
+                                isValidId(settingId) &&
+                                isValidUserSettings(incoming()) &&
+                                incoming().keys().hasAll(['securityLevel', 'maxFailures', 'lockoutSeconds', 'updatedAt']) &&
+                                incoming().keys().hasOnly(['securityLevel', 'maxFailures', 'lockoutSeconds', 'notificationsEnabled', 'autoLockdownOnTamper', 'updatedAt']);
+        allow delete: if isOwner(userId) || isAdmin();
+      }
+    }
+
+    // --- SECURITY AUDIT EVENTS ---
+    match /security_events/{eventId} {
+      allow get: if isSignedIn() && isValidId(eventId) &&
+                    (resource == null || existing().userId == request.auth.uid || isAdmin());
+      allow list: if isSignedIn() &&
+                     (existing().userId == request.auth.uid || isAdmin());
+      allow create: if isSignedIn() &&
+                       isValidId(eventId) &&
+                       isValidSecurityEvent(incoming()) &&
+                       incoming().eventId == eventId &&
+                       incoming().userId == request.auth.uid &&
+                       incoming().keys().hasAll(['eventId', 'userId', 'eventType', 'category', 'severity', 'timestamp', 'detectionSource', 'actionTaken']) &&
+                       incoming().keys().hasOnly(['eventId', 'userId', 'deviceId', 'eventType', 'category', 'severity', 'timestamp', 'accountIdentifier', 'detectionSource', 'actionTaken', 'details']);
+      allow update, delete: if isAdmin();
+    }
+  }
+}

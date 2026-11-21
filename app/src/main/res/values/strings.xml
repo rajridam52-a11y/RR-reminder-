@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">RR Reminder</string>
+    <string name="app_tagline">Smart Timekeeping, Weather &amp; Reminders</string>
+
+    <string name="alarm_channel_name">Alarm Reminders</string>
+    <string name="alarm_channel_desc">Sound and full-screen alerts for scheduled alarms and reminders</string>
+    <string name="service_channel_name">Active Services</string>
+    <string name="service_channel_desc">Active countdown timers and background alarms</string>
+    <string name="timer_channel_name">Timer Alerts</string>
+    <string name="timer_channel_desc">Notifications when countdown timers complete</string>
+    <string name="security_channel_name">Security &amp; Owner Alerts</string>
+    <string name="security_channel_desc">Remote security command and protection alerts</string>
+
+    <string name="nav_home">Home</string>
+    <string name="nav_clock">Clock</string>
+    <string name="nav_reminders">Tasks</string>
+    <string name="nav_weather">Weather</string>
+    <string name="nav_assistant">Assistant</string>
+    <string name="nav_settings">Settings</string>
+</resources>

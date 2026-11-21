@@ -1,0 +1,6 @@
+{
+  "name": "RR Reminder",
+  "description": "Smart reminder and timekeeping Android app with alarms, timers, weather, voice commands, and remote security integration.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

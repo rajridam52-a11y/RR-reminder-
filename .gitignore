@@ -1,0 +1,13 @@
+*.apk
+*.ap_
+*.aab
+*.dex
+.gradle/
+build/
+app/build/
+local.properties
+*-debug.log
+firestore-debug.log
+firebase-debug.log
+functions/node_modules/
+functions/lib/

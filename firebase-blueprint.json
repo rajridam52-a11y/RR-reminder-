@@ -1,0 +1,141 @@
+{
+  "entities": {
+    "DeviceRegistration": {
+      "title": "DeviceRegistration",
+      "description": "Authenticated device registration and FCM push token binding for an RR Reminder user.",
+      "type": "object",
+      "properties": {
+        "deviceId": { "type": "string", "description": "Unique client-generated device identifier" },
+        "ownerUid": { "type": "string", "description": "Firebase Auth UID owning this device" },
+        "deviceModel": { "type": "string", "description": "Hardware manufacturer and model" },
+        "fcmToken": { "type": "string", "description": "Latest Firebase Cloud Messaging token" },
+        "status": { "type": "string", "enum": ["ACTIVE", "REVOKED"], "description": "Device registration status" },
+        "appVersion": { "type": "string", "description": "App version string" },
+        "registeredAt": { "type": "string", "format": "date-time", "description": "Server timestamp of initial registration (FieldValue.serverTimestamp())" },
+        "lastActiveAt": { "type": "string", "format": "date-time", "description": "Server timestamp of last device sync (FieldValue.serverTimestamp())" }
+      },
+      "required": ["deviceId", "ownerUid", "deviceModel", "fcmToken", "status", "registeredAt", "lastActiveAt"]
+    },
+    "PendingCommand": {
+      "title": "PendingCommand",
+      "description": "Server-issued administrative security command queued for FCM or WorkManager delivery.",
+      "type": "object",
+      "properties": {
+        "commandId": { "type": "string", "description": "Unique command UUID" },
+        "ownerUid": { "type": "string", "description": "Owner Firebase Auth UID of the target device" },
+        "issuedByUid": { "type": "string", "description": "Admin Firebase Auth UID that issued the command" },
+        "action": { "type": "string", "enum": ["LOCKDOWN", "RELEASE_LOCKDOWN", "SYNC_SETTINGS", "PING"] },
+        "status": { "type": "string", "enum": ["PENDING", "COMPLETED", "EXPIRED", "FAILED"] },
+        "expiresAt": { "type": "integer", "description": "Unix epoch millis expiration deadline" },
+        "reason": { "type": "string" },
+        "securityLevel": { "type": "string" },
+        "maxFailures": { "type": "integer" },
+        "lockoutSeconds": { "type": "integer" },
+        "autoLockdownOnTamper": { "type": "boolean" },
+        "error": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "acknowledgedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["commandId", "ownerUid", "issuedByUid", "action", "status", "expiresAt", "createdAt"]
+    },
+    "CommandHistoryRecord": {
+      "title": "CommandHistoryRecord",
+      "description": "Immutable archive of acknowledged remote commands.",
+      "type": "object",
+      "properties": {
+        "commandId": { "type": "string" },
+        "ownerUid": { "type": "string" },
+        "issuedByUid": { "type": "string" },
+        "action": { "type": "string" },
+        "status": { "type": "string", "enum": ["COMPLETED", "EXPIRED", "FAILED"] },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "acknowledgedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["commandId", "ownerUid", "issuedByUid", "action", "status", "acknowledgedAt"]
+    },
+    "UserProfile": {
+      "title": "UserProfile",
+      "description": "UID-isolated user account metadata.",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "displayName": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["uid", "createdAt"]
+    },
+    "UserSecuritySettings": {
+      "title": "UserSecuritySettings",
+      "description": "Security-behavior sync settings isolated per user UID (never overwrites local alarms or reminders).",
+      "type": "object",
+      "properties": {
+        "securityLevel": { "type": "string", "enum": ["STANDARD", "HIGH", "MAXIMUM"] },
+        "maxFailures": { "type": "integer" },
+        "lockoutSeconds": { "type": "integer" },
+        "notificationsEnabled": { "type": "boolean" },
+        "autoLockdownOnTamper": { "type": "boolean" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["securityLevel", "maxFailures", "lockoutSeconds", "updatedAt"]
+    },
+    "SecurityAuditEvent": {
+      "title": "SecurityAuditEvent",
+      "description": "Security anomaly or remote command audit entry.",
+      "type": "object",
+      "properties": {
+        "eventId": { "type": "string" },
+        "userId": { "type": "string" },
+        "deviceId": { "type": "string" },
+        "eventType": { "type": "string" },
+        "category": { "type": "string" },
+        "severity": { "type": "string" },
+        "timestamp": { "type": "string", "format": "date-time" },
+        "accountIdentifier": { "type": "string" },
+        "detectionSource": { "type": "string" },
+        "actionTaken": { "type": "string" },
+        "details": { "type": "object" }
+      },
+      "required": ["eventId", "userId", "eventType", "category", "severity", "timestamp", "detectionSource", "actionTaken"]
+    },
+    "AdminRolesConfig": {
+      "title": "AdminRolesConfig",
+      "description": "Server-controlled authorized Firebase UID allowlist for remote admin operations.",
+      "type": "object",
+      "properties": {
+        "authorized_admin_uids": { "type": "array" },
+        "primary_admin_uid": { "type": "string" }
+      }
+    }
+  },
+  "firestore": {
+    "/devices/{deviceId}": {
+      "schema": { "$ref": "#/entities/DeviceRegistration" },
+      "description": "Registered devices and FCM tokens owned by an authenticated user."
+    },
+    "/devices/{deviceId}/pending_commands/{commandId}": {
+      "schema": { "$ref": "#/entities/PendingCommand" },
+      "description": "Inbound admin-issued security commands awaiting execution or acknowledgment."
+    },
+    "/devices/{deviceId}/command_history/{commandId}": {
+      "schema": { "$ref": "#/entities/CommandHistoryRecord" },
+      "description": "Immutable audit log of executed/expired security commands."
+    },
+    "/users/{userId}": {
+      "schema": { "$ref": "#/entities/UserProfile" },
+      "description": "User profile metadata isolated to request.auth.uid == userId."
+    },
+    "/users/{userId}/settings/{settingId}": {
+      "schema": { "$ref": "#/entities/UserSecuritySettings" },
+      "description": "Remote security profile preferences for the authenticated user."
+    },
+    "/security_events/{eventId}": {
+      "schema": { "$ref": "#/entities/SecurityAuditEvent" },
+      "description": "Tamper and remote-command security audit records."
+    },
+    "/admin_roles/{docId}": {
+      "schema": { "$ref": "#/entities/AdminRolesConfig" },
+      "description": "Console/Admin-SDK managed UID allowlist controlling isAdmin() authorization."
+    }
+  }
+}
