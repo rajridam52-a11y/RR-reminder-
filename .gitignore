@@ -1,4 +1,5 @@
 *.apk
+!/RR_Reminder.apk
 *.ap_
 *.aab
 *.dex
