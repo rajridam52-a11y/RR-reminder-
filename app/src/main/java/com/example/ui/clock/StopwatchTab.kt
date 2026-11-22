@@ -35,7 +35,7 @@ fun StopwatchTab() {
             fontSize = 48.sp,
             fontWeight = FontWeight.Bold,
             fontFamily = FontFamily.Monospace,
-            color = Color(0xFF00E5FF)
+            color = MaterialTheme.colorScheme.primary
         )
 
         Spacer(modifier = Modifier.height(28.dp))
@@ -100,7 +100,7 @@ fun StopwatchTab() {
         ) {
             items(laps, key = { it.lapNumber }) { lap ->
                 Card(
-                    colors = CardDefaults.cardColors(containerColor = Color(0xFF1E293B)),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
                     shape = RoundedCornerShape(12.dp)
                 ) {
                     Row(
@@ -109,11 +109,11 @@ fun StopwatchTab() {
                             .padding(horizontal = 16.dp, vertical = 12.dp),
                         horizontalArrangement = Arrangement.SpaceBetween
                     ) {
-                        Text("Lap ${lap.lapNumber}", color = Color(0xFF94A3B8), fontWeight = FontWeight.Medium)
+                        Text("Lap ${lap.lapNumber}", color = MaterialTheme.colorScheme.onSurfaceVariant, fontWeight = FontWeight.Medium)
                         Text(
                             text = "+${lap.formattedLapTime}  (${lap.formattedTotalTime})",
                             fontFamily = FontFamily.Monospace,
-                            color = Color.White
+                            color = MaterialTheme.colorScheme.onSurface
                         )
                     }
                 }

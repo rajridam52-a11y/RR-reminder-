@@ -51,13 +51,13 @@ fun WorldClockTab() {
                 Icon(
                     imageVector = Icons.Default.Public,
                     contentDescription = "No world clocks",
-                    tint = Color(0xFF475569),
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.size(64.dp)
                 )
                 Spacer(modifier = Modifier.height(12.dp))
-                Text("No world clocks added", color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.SemiBold)
+                Text("No world clocks added", color = MaterialTheme.colorScheme.onBackground, fontSize = 18.sp, fontWeight = FontWeight.SemiBold)
                 Spacer(modifier = Modifier.height(4.dp))
-                Text("Tap + to compare time zones worldwide.", color = Color(0xFF94A3B8), fontSize = 14.sp)
+                Text("Tap + to compare time zones worldwide.", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 14.sp)
             }
         } else {
             LazyColumn(
@@ -71,7 +71,7 @@ fun WorldClockTab() {
                     key(tick) {
                         Card(
                             modifier = Modifier.fillMaxWidth(),
-                            colors = CardDefaults.cardColors(containerColor = Color(0xFF1E293B)),
+                            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
                             shape = RoundedCornerShape(18.dp)
                         ) {
                             Row(
@@ -86,17 +86,17 @@ fun WorldClockTab() {
                                         clock.cityName,
                                         fontSize = 18.sp,
                                         fontWeight = FontWeight.Bold,
-                                        color = Color.White
+                                        color = MaterialTheme.colorScheme.onSurface
                                     )
                                     Text(
                                         "${clock.countryName} • ${clock.formattedDate}",
                                         fontSize = 13.sp,
-                                        color = Color(0xFF94A3B8)
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
                                     )
                                     Text(
                                         clock.getTimeDifferenceFromLocal(),
                                         fontSize = 12.sp,
-                                        color = Color(0xFF38BDF8)
+                                        color = MaterialTheme.colorScheme.secondary
                                     )
                                 }
                                 Row(verticalAlignment = Alignment.CenterVertically) {
@@ -104,7 +104,7 @@ fun WorldClockTab() {
                                         clock.formattedTime,
                                         fontSize = 22.sp,
                                         fontWeight = FontWeight.Bold,
-                                        color = Color(0xFF00E5FF)
+                                        color = MaterialTheme.colorScheme.primary
                                     )
                                     Spacer(modifier = Modifier.width(4.dp))
                                     IconButton(
@@ -127,8 +127,8 @@ fun WorldClockTab() {
                 .align(Alignment.BottomEnd)
                 .padding(24.dp)
                 .testTag("add_world_clock_fab"),
-            containerColor = Color(0xFF00E5FF),
-            contentColor = Color.Black
+            containerColor = MaterialTheme.colorScheme.secondary,
+            contentColor = MaterialTheme.colorScheme.onSecondary
         ) {
             Icon(Icons.Default.Add, contentDescription = "Add World City")
         }
@@ -154,8 +154,8 @@ fun WorldClockTab() {
                                 modifier = Modifier.fillMaxWidth(),
                                 horizontalArrangement = Arrangement.SpaceBetween
                             ) {
-                                Text("${city.cityName}, ${city.countryName}", color = Color.White)
-                                Text(city.timeZoneId.substringAfter("/"), color = Color(0xFF94A3B8), fontSize = 12.sp)
+                                Text("${city.cityName}, ${city.countryName}", color = MaterialTheme.colorScheme.onSurface)
+                                Text(city.timeZoneId.substringAfter("/"), color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 12.sp)
                             }
                         }
                     }

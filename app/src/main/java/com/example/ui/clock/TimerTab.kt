@@ -23,6 +23,9 @@ import com.example.timer.TimerStatus
 @Composable
 fun TimerTab() {
     val context = LocalContext.current
+    val observedConfig by ClockAppearanceStore.observe(context).collectAsState()
+    val config = observedConfig ?: ClockAppearanceStore.load(context)
+    val accent = config.accent.primary
     val remainingSeconds by TimerManager.remainingSeconds.collectAsState()
     val totalSeconds by TimerManager.totalSeconds.collectAsState()
     val timerStatus by TimerManager.status.collectAsState()
@@ -46,15 +49,15 @@ fun TimerTab() {
                 progress = { progress },
                 modifier = Modifier.fillMaxSize(),
                 strokeWidth = 8.dp,
-                color = if (timerStatus == TimerStatus.COMPLETED) Color(0xFFFFB300) else Color(0xFF00E676),
-                trackColor = Color(0xFF1E293B)
+                color = if (timerStatus == TimerStatus.COMPLETED) Color(0xFFFFB300) else accent,
+                trackColor = MaterialTheme.colorScheme.surfaceVariant
             )
             Text(
                 text = String.format("%02d:%02d:%02d", hours, minutes, seconds),
                 fontSize = 36.sp,
                 fontWeight = FontWeight.Bold,
                 fontFamily = FontFamily.Monospace,
-                color = Color.White
+                color = MaterialTheme.colorScheme.onBackground
             )
         }
 
